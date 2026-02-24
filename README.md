@@ -12,7 +12,7 @@ It is a **private/internal tool** designed for **one Etsy shop owner** to:
 - **Batch update inventory/restock data** (where supported by the Etsy API)
 
 > Note: Etsy’s exact API endpoints and the inventory/variation payload schema can differ by API version.  
-> The script is a solid framework and includes clearly marked places where you must align with Etsy’s current documentation for:
+> The script is a solid framework and includes clearly marked places where we must align with Etsy’s current documentation for:
 > - OAuth authorization URLs (`auth_url`, `token_url`)
 > - Listing endpoints (create/update)
 > - Inventory/variations payload shape
