@@ -13,7 +13,7 @@ EstyTool helps one Etsy shop with day-to-day listing operations:
 
 ## Who uses this app
 
-This app is for internal use only by one Etsy shop owner/team. It is not a public SaaS app and does not onboard third-party users.
+This app is for internal use only by one Etsy shop JadeetFilAtelier team. It is not a public SaaS app and does not onboard third-party users.
 
 ## Current status
 
@@ -34,9 +34,9 @@ https://www.etsy.com/legal/api/
 
 ## Contact
 
-Owner: Yijiao  
-Email: your-email@example.com
+Owner: Yijiao SHANG
+Email: shangyijiao@gmail.com
 
 ## Repository
 
-https://github.com/<your-username>/estytool
+https://shangyijiao-ux.github.io/estytool/
