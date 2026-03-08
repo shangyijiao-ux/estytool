@@ -1,0 +1,12 @@
+[project]
+name = "estytool"
+version = "0.1.0"
+description = "Private Etsy bulk listing uploader"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "requests>=2.31.0",
+]
+
+[tool.pdm]
+distribution = false

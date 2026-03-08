@@ -1,42 +1,46 @@
 # estytool
-Private internal app for my own Etsy shop selling handmade knitted physical goods. Uses Etsy API to bulk create/update listings (draft-first), manage variations (size/color/pattern with SKUs, qty, pricing), and batch upload/order photos
 
-# Etsy Bulk Listing Uploader (Private Internal Tool)
-
-This project contains **one Python file**: `etsy_bulk_uploader.py`.
-
-It is a **private/internal tool** designed for **one Etsy shop owner** to:
-- **Bulk create listings** (draft-first workflow)
-- **Batch upload and order listing images**
-- **Manage variations** for physical handmade products (e.g., **size / color / pattern**) with **SKU + quantity + optional price per variant**
-- **Batch update inventory/restock data** (where supported by the Etsy API)
-
-> Note: Etsy’s exact API endpoints and the inventory/variation payload schema can differ by API version.  
-> The script is a solid framework and includes clearly marked places where we must align with Etsy’s current documentation for:
-> - OAuth authorization URLs (`auth_url`, `token_url`)
-> - Listing endpoints (create/update)
-> - Inventory/variations payload shape
-
----
+Private internal app for one Etsy shop to bulk create/update listings, manage variations, upload images, and list existing products.
 
 ## Requirements
 
-- Python **3.9+** recommended
-- Internet access
-- An **Etsy Developer App** (Client ID / API keystring)
-- Approved OAuth scopes for listing write access
+- Python 3.9+
+- Etsy developer app credentials
+- PDM (`pdm`)
 
-Python dependency:
-- `requests`
-
-Install dependency:
-```bash
-pip install requests
-
-## Run Commands (Upload Listings + Images)
-
-### A) Recommended: Validate first (no API calls)
-This checks your input and shows payload previews without uploading anything:
+Install dependencies:
 
 ```bash
-python etsy_bulk_uploader.py --config config.json --input products.json --images ./images --dry-run
+pdm install
+```
+
+## Config
+
+Use `config.json` with at least:
+
+- `client_id`
+- `client_secret` (optional but supported)
+- `shop_id`
+- `redirect_uri`
+- `auth_url`
+- `token_url`
+
+## Commands
+
+Validate upload input (no API writes):
+
+```bash
+pdm run python etsy_bulk_uploader.py --config config.json --input products.json --images ./images --dry-run
+```
+
+Upload listings + images:
+
+```bash
+pdm run python etsy_bulk_uploader.py --config config.json --input products.json --images ./images
+```
+
+List products/listings from Etsy:
+
+```bash
+pdm run python etsy_bulk_uploader.py --config config.json --list-products --state active --limit 25 --max-pages 2
+```

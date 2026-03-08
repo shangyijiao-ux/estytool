@@ -300,6 +300,7 @@ class _CallbackHandler(http.server.BaseHTTPRequestHandler):
 def oauth_authorize_interactive(
     *,
     client_id: str,
+    client_secret: Optional[str],
     redirect_uri: str,
     scopes: List[str],
     auth_url: str,
@@ -359,6 +360,8 @@ def oauth_authorize_interactive(
         "code": code,
         "code_verifier": verifier,
     }
+    if client_secret:
+        data["client_secret"] = client_secret
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     if api_key_header_name:
         headers[api_key_header_name] = client_id
@@ -388,7 +391,15 @@ class EtsyClient:
             "Accept": "application/json",
         }
 
-    def request(self, method: str, path: str, *, json_body: Any = None, files: Any = None) -> Any:
+    def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json_body: Any = None,
+        files: Any = None,
+        query_params: Optional[Dict[str, Any]] = None,
+    ) -> Any:
         url = f"{self.api_base}{path}"
         for attempt in range(6):
             resp = self.session.request(
@@ -397,6 +408,7 @@ class EtsyClient:
                 headers=self._headers(),
                 json=json_body if files is None else None,
                 files=files,
+                params=query_params,
                 timeout=60,
             )
 
@@ -420,6 +432,24 @@ class EtsyClient:
         # Example placeholder endpoint:
         # POST /shops/{shop_id}/listings
         return self.request("POST", f"/shops/{shop_id}/listings", json_body=payload)
+
+    def list_shop_products(
+        self,
+        shop_id: int,
+        *,
+        state: str = "active",
+        limit: int = 25,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        return self.request(
+            "GET",
+            f"/shops/{shop_id}/listings",
+            query_params={
+                "state": state,
+                "limit": limit,
+                "offset": offset,
+            },
+        )
 
     def update_listing(self, shop_id: int, listing_id: int, payload: Dict[str, Any]) -> Dict[str, Any]:
         return self.request("PUT", f"/shops/{shop_id}/listings/{listing_id}", json_body=payload)
@@ -592,6 +622,7 @@ def ensure_token(config: Dict[str, Any]) -> str:
 
     token = oauth_authorize_interactive(
         client_id=config["client_id"],
+        client_secret=config.get("client_secret"),
         redirect_uri=config["redirect_uri"],
         scopes=config.get("scopes", []),
         auth_url=auth_url,
@@ -603,15 +634,104 @@ def ensure_token(config: Dict[str, Any]) -> str:
     return token["access_token"]
 
 
+def list_products_mode(
+    *,
+    client: EtsyClient,
+    shop_id: int,
+    state: str,
+    limit: int,
+    max_pages: int,
+) -> None:
+    offset = 0
+    page = 0
+    seen = 0
+
+    while page < max_pages:
+        payload = client.list_shop_products(shop_id, state=state, limit=limit, offset=offset)
+
+        results = payload.get("results") if isinstance(payload, dict) else None
+        if not isinstance(results, list):
+            raise RuntimeError(f"Unexpected list response format: {payload}")
+
+        if not results:
+            if page == 0:
+                print("No products found.")
+            break
+
+        for item in results:
+            listing_id = item.get("listing_id") or item.get("listingId") or item.get("id")
+            title = item.get("title", "")
+            price_obj = item.get("price")
+            quantity = item.get("quantity")
+            state_value = item.get("state")
+
+            if isinstance(price_obj, dict):
+                amount = price_obj.get("amount")
+                divisor = price_obj.get("divisor")
+                if isinstance(amount, (int, float)) and isinstance(divisor, (int, float)) and divisor:
+                    price = f"{amount / divisor:.2f}"
+                else:
+                    price = str(price_obj)
+            elif price_obj is None:
+                price = ""
+            else:
+                price = str(price_obj)
+
+            print(f"{listing_id}\t{title}\t{price}\tqty={quantity}\tstate={state_value}")
+            seen += 1
+
+        page += 1
+        offset += len(results)
+
+        if len(results) < limit:
+            break
+
+    print(f"Total listed: {seen}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True, help="config.json path")
-    ap.add_argument("--input", required=True, help="products.json or products.csv")
-    ap.add_argument("--images", required=True, help="directory containing images")
+    ap.add_argument("--input", help="products.json or products.csv")
+    ap.add_argument("--images", help="directory containing images")
+    ap.add_argument("--list-products", action="store_true", help="list products from Etsy and exit")
+    ap.add_argument("--state", default="active", help="listing state filter for --list-products")
+    ap.add_argument("--limit", type=int, default=25, help="page size for --list-products")
+    ap.add_argument("--max-pages", type=int, default=1, help="max pages to fetch for --list-products")
     ap.add_argument("--dry-run", action="store_true", help="validate & print payloads only")
     args = ap.parse_args()
 
     config = load_json(args.config)
+
+    access_token = ensure_token(config)
+
+    client = EtsyClient(
+        api_base=config.get("api_base", "https://api.etsy.com/v3/application"),
+        client_id=config["client_id"],
+        access_token=access_token,
+    )
+
+    shop_id = int(config["shop_id"])
+
+    if args.list_products:
+        if args.limit <= 0:
+            raise SystemExit("--limit must be > 0")
+        if args.max_pages <= 0:
+            raise SystemExit("--max-pages must be > 0")
+        list_products_mode(
+            client=client,
+            shop_id=shop_id,
+            state=args.state,
+            limit=args.limit,
+            max_pages=args.max_pages,
+        )
+        return
+
+    if not args.images:
+        raise SystemExit("--images is required unless --list-products is used")
+    if not args.input:
+        raise SystemExit("--input is required unless --list-products is used")
+
     images_dir = Path(args.images)
     if not images_dir.exists():
         raise SystemExit(f"Images directory not found: {images_dir}")
@@ -627,15 +747,6 @@ def main() -> None:
     else:
         raise SystemExit("Input must be .json or .csv")
 
-    access_token = ensure_token(config)
-
-    client = EtsyClient(
-        api_base=config.get("api_base", "https://api.etsy.com/v3/application"),
-        client_id=config["client_id"],
-        access_token=access_token,
-    )
-
-    shop_id = int(config["shop_id"])
     run_upload(client=client, shop_id=shop_id, products=products, images_dir=images_dir, dry_run=args.dry_run)
 
 
