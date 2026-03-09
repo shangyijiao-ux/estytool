@@ -1,10 +1,10 @@
-# EstyTool
+# EtsyTool
 
 Private internal tool for one Etsy shop.
 
 ## What this app does
 
-EstyTool helps one Etsy shop with day-to-day listing operations:
+EtsyTool helps one Etsy shop with day-to-day listing operations:
 
 - Bulk create and update listings
 - Manage listing variations
@@ -39,4 +39,4 @@ Email: shangyijiao@gmail.com
 
 ## Repository
 
-https://github.com/shangyijiao-ux/estytool
+https://github.com/shangyijiao-ux/Etsytool

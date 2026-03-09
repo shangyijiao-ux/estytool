@@ -1,4 +1,4 @@
-# estytool
+# Etsytool
 
 Private internal app for one Etsy shop to bulk create/update listings, manage variations, upload images, and list existing products.
 

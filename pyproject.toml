@@ -1,5 +1,5 @@
 [project]
-name = "estytool"
+name = "Etsytool"
 version = "0.1.0"
 description = "Private Etsy bulk listing uploader"
 readme = "README.md"
